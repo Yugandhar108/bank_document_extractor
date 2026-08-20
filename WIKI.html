@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bank Statement Extractor | Project Wiki</title>
+  <style>
+    :root {
+      --ink: #17212b;
+      --muted: #5d6b76;
+      --paper: #f7f4ed;
+      --panel: #fffdf8;
+      --line: #d9d4c8;
+      --teal: #0b6b68;
+      --teal-light: #d8eeea;
+      --coral: #c75b42;
+      --yellow: #f3d98b;
+      --shadow: 0 12px 30px rgba(23, 33, 43, .08);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.65;
+    }
+    a { color: var(--teal); }
+    code, pre, .tag, nav, .eyebrow, .status { font-family: "Courier New", monospace; }
+    .hero {
+      padding: 72px 7vw 64px;
+      background: #153f45;
+      color: #fffdf8;
+      border-bottom: 8px solid var(--coral);
+    }
+    .hero-inner, main { max-width: 1120px; margin: 0 auto; }
+    .eyebrow {
+      color: var(--yellow);
+      font-size: .8rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3 { line-height: 1.15; margin-top: 0; }
+    h1 { max-width: 800px; margin-bottom: 20px; font-size: clamp(2.6rem, 7vw, 5.8rem); font-weight: 700; }
+    .hero p { max-width: 700px; margin: 0; font-size: 1.25rem; color: #dcebe7; }
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: flex;
+      gap: 18px;
+      overflow-x: auto;
+      padding: 14px 7vw;
+      background: #fffdf8;
+      border-bottom: 1px solid var(--line);
+      font-size: .78rem;
+      white-space: nowrap;
+    }
+    nav a { text-decoration: none; font-weight: 700; }
+    main { padding: 44px 7vw 80px; }
+    section { padding: 38px 0; border-bottom: 1px solid var(--line); }
+    section:last-child { border-bottom: 0; }
+    h2 { font-size: 2.2rem; color: var(--teal); }
+    h3 { margin-bottom: 8px; font-size: 1.25rem; }
+    .intro-grid, .two-column, .feature-grid { display: grid; gap: 20px; }
+    .intro-grid { grid-template-columns: 1.2fr .8fr; align-items: start; }
+    .two-column { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .feature-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .panel {
+      padding: 24px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    .panel h3 { color: var(--coral); }
+    .status { display: inline-block; padding: 4px 9px; border-radius: 4px; font-size: .75rem; font-weight: 700; }
+    .done { background: var(--teal-light); color: var(--teal); }
+    .flow { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; margin: 20px 0; }
+    .flow span { padding: 10px 13px; background: var(--teal-light); border: 1px solid #a8d6d0; border-radius: 5px; font-weight: 700; }
+    .flow b { color: var(--coral); }
+    ul, ol { padding-left: 24px; }
+    li + li { margin-top: 7px; }
+    pre { overflow-x: auto; padding: 18px; background: #202a31; color: #e9f4ec; border-radius: 6px; }
+    details { padding: 15px 0; border-bottom: 1px solid var(--line); }
+    summary { cursor: pointer; font-weight: 700; color: var(--teal); }
+    .small { color: var(--muted); font-size: .95rem; }
+    @media (max-width: 760px) {
+      .intro-grid, .two-column, .feature-grid { grid-template-columns: 1fr; }
+      .hero { padding-top: 48px; }
+      main { padding-top: 25px; }
+      h1 { font-size: 3rem; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="eyebrow">Project Wiki / 2026</div>
+      <h1>Bank Statement Document Extractor</h1>
+      <p>A small team of AI workers reads a bank statement, checks the maths, and explains mistakes in a way people can review.</p>
+    </div>
+  </header>
+
+  <nav aria-label="Wiki sections">
+    <a href="#overview">Overview</a>
+    <a href="#how-to-use">How To Use</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#stack">Tech Stack</a>
+    <a href="#faq">FAQs</a>
+    <a href="#troubleshooting">Troubleshooting</a>
+    <a href="#security">Security</a>
+    <a href="#files">Files</a>
+  </nav>
+
+  <main>
+    <section id="overview">
+      <div class="intro-grid">
+        <div>
+          <h2>What is this project?</h2>
+          <p>This project takes a bank statement PDF, such as a document with many pages and a busy transaction table, and turns it into organized data.</p>
+          <p>It does not simply ask one AI question and trust the answer. Different workers handle different jobs, normal Python rules check the numbers, and a reflection worker explains what may have gone wrong.</p>
+        </div>
+        <div class="panel">
+          <h3>For a non-technical reader</h3>
+          <p>Think of it as a careful office team:</p>
+          <ol>
+            <li>One person reads account details.</li>
+            <li>One reads customer details.</li>
+            <li>One reads the transaction table.</li>
+            <li>A supervisor combines and checks their work.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section id="how-to-use">
+      <h2>How To Use</h2>
+      <p class="small">The application can be started from the project folder with Streamlit.</p>
+      <div class="two-column">
+        <div class="panel">
+          <h3>Current development use</h3>
+          <ol>
+            <li>Open a terminal in the project folder.</li>
+            <li>Install the packages from <code>requirements.txt</code>.</li>
+            <li>Copy <code>.env.example</code> to <code>.venv/.env</code>.</li>
+            <li>Add one private provider key to <code>.venv/.env</code>.</li>
+            <li>Put permitted PDFs in <code>data/input</code>.</li>
+            <li>Run the automated tests.</li>
+          </ol>
+          <pre>python -m pip install -r requirements.txt
+python -m pytest -q</pre>
+        </div>
+        <div class="panel">
+          <h3>What the user will do</h3>
+          <ol>
+            <li>Open the application.</li>
+            <li>Select a PDF.</li>
+            <li>Watch the workers process it.</li>
+            <li>Review any warnings or conflicts.</li>
+            <li>Approve or reject the result.</li>
+          </ol>
+          <p class="small">The result screen shows the extracted data, checks, conflicts, and reflection details. Document text is sent to the selected AI provider.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>How It Works</h2>
+      <div class="flow" aria-label="Processing flow">
+        <span>PDF</span><b>→</b><span>Safe reader</span><b>→</b><span>3 workers in parallel</span><b>→</b><span>Merge</span><b>→</b><span>Checks</span><b>→</b><span>Reflection if needed</span>
+      </div>
+      <div class="two-column">
+        <div>
+          <h3>Implemented now</h3>
+          <ul>
+            <li>Every PDF page is read.</li>
+            <li>Paths outside the allowed input folder are blocked.</li>
+            <li>Three agents run concurrently.</li>
+            <li>Start and end timestamps prove overlap.</li>
+            <li>Conflicting values are reported rather than hidden.</li>
+            <li>Transactions are preserved without asking an AI to copy them again.</li>
+            <li>Dates, fields, amounts, and balances are checked.</li>
+            <li>Reflection runs only after validation failure.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Important design choice</h3>
+          <p>The transaction list can be large. The merge stage keeps the original transaction result instead of asking another AI to rewrite the full list. This reduces cost, avoids token-limit problems, and prevents a second transcription error.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="stack">
+      <h2>Tech Stack</h2>
+      <div class="feature-grid">
+        <div class="panel"><h3>Language</h3><p><strong>Python</strong> for the application logic, validation rules, file handling, and tests.</p></div>
+        <div class="panel"><h3>AI connection</h3><p><strong>OpenAI-compatible SDK</strong> for sending prompts to a configured model. The provider can be changed through settings.</p></div>
+        <div class="panel"><h3>Document reading</h3><p><strong>pypdf</strong> for extracting text from PDF pages.</p></div>
+        <div class="panel"><h3>Data models</h3><p><strong>Pydantic</strong> for checking that agent responses have the expected structure.</p></div>
+        <div class="panel"><h3>Concurrency</h3><p><strong>asyncio</strong> and worker threads for running independent AI calls at the same time.</p></div>
+        <div class="panel"><h3>Testing</h3><p><strong>pytest</strong> with mocked AI responses, so most tests do not spend money or require a live API.</p></div>
+      </div>
+    </section>
+
+    <section id="faq">
+      <h2>FAQs</h2>
+      <details><summary>Does this project change the original PDF?</summary><p>No. It reads the PDF and creates structured results. The original input remains unchanged.</p></details>
+      <details><summary>Can it read a scanned PDF?</summary><p>It can open one, but a scanned PDF with no text layer currently produces no extracted text. The application shows a clear message when this happens.</p></details>
+      <details><summary>Why use multiple AI workers?</summary><p>Each worker has a smaller, clearer job. This makes results easier to test and makes it easier to find which part needs improvement.</p></details>
+      <details><summary>Is the result automatically trusted?</summary><p>No. The validation stage checks objective rules and displays any warnings before the result is reviewed.</p></details>
+      <details><summary>Is an API key required to run tests?</summary><p>No. The tests use fake model responses. A real key is needed only for live AI calls.</p></details>
+      <details><summary>Where are prompts stored?</summary><p>Prompt files are in the <code>prompts</code> folder. Each prompt includes a version and a reason for the change.</p></details>
+    </section>
+
+    <section id="troubleshooting">
+      <h2>Troubleshooting</h2>
+      <div class="two-column">
+        <div class="panel"><h3>No provider is configured</h3><p>Copy <code>.env.example</code> to <code>.venv/.env</code> and add one valid private provider key. The application checks all supported provider settings. Do not add a key to source files.</p></div>
+        <div class="panel"><h3>“PDF path must be inside…”</h3><p>Move the PDF into <code>data/input</code>. This protection prevents the application from reading unrelated files on the computer.</p></div>
+        <div class="panel"><h3>“Could not read PDF”</h3><p>The file may be corrupted, incomplete, or not a real PDF. Try opening it in a normal PDF viewer first.</p></div>
+        <div class="panel"><h3>Validation says the balance is wrong</h3><p>Check the original statement and the extracted debit, credit, and running balance values. The error includes the expected and actual values.</p></div>
+        <div class="panel"><h3>Tests cannot find a package</h3><p>Run <code>python -m pip install -r requirements.txt</code> using the same Python environment that runs pytest.</p></div>
+        <div class="panel"><h3>AI response is not valid JSON</h3><p>The parser handles explanations and code fences, but a completely malformed or cut-off response still needs to be retried or reviewed.</p></div>
+      </div>
+    </section>
+
+    <section id="security">
+      <h2>Security And Privacy</h2>
+      <ul>
+        <li>Provider keys are read from <code>.venv/.env</code> and are not displayed.</li>
+        <li>The environment file is excluded from source control.</li>
+        <li>PDF paths are restricted to the permitted input directory.</li>
+        <li>Uploads are limited to 25 MB, stored temporarily, and removed after processing.</li>
+        <li>Custom provider endpoints must use HTTPS and cannot contain login details.</li>
+        <li>Document text is sent to the selected AI provider, so only approved documents should be uploaded.</li>
+        <li>Any key previously shared publicly must be revoked and replaced.</li>
+      </ul>
+    </section>
+
+    <section id="files">
+      <h2>Where To Look In The Code</h2>
+      <div class="two-column">
+        <div><ul>
+          <li><code>src/ingestion/pdf_reader.py</code> - PDF reading and path safety.</li>
+          <li><code>src/agents</code> - extraction and reflection workers.</li>
+          <li><code>src/orchestration</code> - concurrency, merge, and reflection trigger.</li>
+          <li><code>src/validation/validator.py</code> - deterministic checks.</li>
+        </ul></div>
+        <div><ul>
+          <li><code>src/models/schemas.py</code> - expected data shapes.</li>
+          <li><code>prompts</code> - versioned AI instructions.</li>
+          <li><code>tests</code> - examples of expected behavior.</li>
+          <li><code>README.md</code> - short project guide.</li>
+        </ul></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
