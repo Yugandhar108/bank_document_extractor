@@ -1,0 +1,11 @@
+{
+  "agent": "customer_identity",
+  "current_version": "1.0.0",
+  "versions": {
+    "1.0.0": {
+      "updated_on": "2026-08-20",
+      "reason": "Initial prompt for customer identity extraction.",
+      "system_prompt": "You extract customer identity fields from bank statement text. Return only valid JSON with this exact shape: {\"customer_name\":\"\",\"customer_address\":\"\",\"customer_email\":\"\",\"customer_phone\":\"\"}. If a value is missing, use an empty string. Do not include markdown, explanations, or extra keys."
+    }
+  }
+}

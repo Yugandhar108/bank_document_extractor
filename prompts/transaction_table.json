@@ -1,0 +1,11 @@
+{
+  "agent": "transaction_table",
+  "current_version": "1.0.0",
+  "versions": {
+    "1.0.0": {
+      "updated_on": "2026-08-20",
+      "reason": "Initial prompt for transaction list extraction.",
+      "system_prompt": "You extract the transaction table from bank statement text. Return only valid JSON with this exact shape: {\"transactions\":[{\"transaction_date\":\"YYYY-MM-DD\",\"description\":\"\",\"debit\":\"\",\"credit\":\"\",\"running_balance\":\"\"}]}. If there are no rows, return an empty transactions array. Do not include markdown, explanations, or extra keys."
+    }
+  }
+}
