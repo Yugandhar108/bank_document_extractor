@@ -147,20 +147,23 @@
             <li>Install the packages from <code>requirements.txt</code>.</li>
             <li>Copy <code>.env.example</code> to <code>.venv/.env</code>.</li>
             <li>Add one private provider key to <code>.venv/.env</code>.</li>
-            <li>Put permitted PDFs in <code>data/input</code>.</li>
-            <li>Run the automated tests.</li>
+            <li>Run the application with the launch commands below.</li>
           </ol>
-          <pre>python -m pip install -r requirements.txt
-python -m pytest -q</pre>
+          <pre>cd bank_document_extractor
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m streamlit run app.py</pre>
+          <p>Open <code>http://localhost:8502</code> in your browser.</p>
+          <p class="small">Alternative: <code>.venv\Scripts\python.exe -m streamlit run app.py</code></p>
         </div>
         <div class="panel">
-          <h3>What the user will do</h3>
+          <h3>Using the application</h3>
           <ol>
-            <li>Open the application.</li>
-            <li>Select a PDF.</li>
-            <li>Watch the workers process it.</li>
-            <li>Review any warnings or conflicts.</li>
-            <li>Approve or reject the result.</li>
+            <li>Upload a bank statement PDF.</li>
+            <li>Select <strong>Run extraction</strong>.</li>
+            <li>Watch the workers process the document.</li>
+            <li>Review the extracted account details and transaction table.</li>
+            <li>Review validation warnings, conflicts, and reflection output.</li>
           </ol>
           <p class="small">The result screen shows the extracted data, checks, conflicts, and reflection details. Document text is sent to the selected AI provider.</p>
         </div>

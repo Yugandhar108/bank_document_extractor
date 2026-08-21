@@ -100,11 +100,28 @@ The tests use mocked AI responses, so they do not require a live API request.
 
 ## Start the application
 
-Run Streamlit from the project folder:
+From PowerShell, run these commands from the project folder:
 
 ```powershell
+cd bank_document_extractor
+.venv\Scripts\Activate.ps1
 python -m streamlit run app.py
 ```
+
+If you do not want to activate the virtual environment, run:
+
+```powershell
+.venv\Scripts\python.exe -m streamlit run app.py
+```
+
+Then open `http://localhost:8502` in your browser.
+
+To use the application:
+
+1. Upload a bank statement PDF.
+2. Select **Run extraction**.
+3. Review the extracted account details and transaction table.
+4. Review validation warnings, merge conflicts, and reflection output if shown.
 
 The browser page lets you upload a PDF, start extraction, see each processing
 stage, review the transaction table, and inspect validation or reflection output.
