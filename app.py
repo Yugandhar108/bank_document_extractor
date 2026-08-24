@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 import tempfile
 
 import streamlit as st
 
 from config.settings import ensure_runtime_directories, load_settings
+from src.agents.base_agent import AgentCallError
 from src.ingestion.pdf_reader import PdfReaderError, read_pdf_text
+from src.logging_utils import get_app_logger, log_event, new_run_id, reset_run_id, set_run_id
 from src.orchestration.merge import merge_parallel_results
 from src.orchestration.parallel_runner import run_parallel_extraction
 from src.orchestration.reflection import run_reflection_if_needed
@@ -27,13 +30,59 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    .stApp { background: #f7f4ed; }
-    [data-testid="stHeader"] { background: rgba(247, 244, 237, 0.9); }
-    .hero { padding: 1.3rem 0 1rem; border-bottom: 1px solid #d9d4c8; }
-    .hero h1 { color: #153f45; font-family: Georgia, serif; font-size: 2.8rem; margin: 0; }
-    .hero p { color: #5d6b76; font-size: 1.05rem; }
-    .stage { padding: .75rem 1rem; border-left: 4px solid #0b6b68; background: #d8eeea; margin: .45rem 0; }
-    .warning-box { padding: 1rem; border-left: 4px solid #c75b42; background: #fff0e9; }
+        :root {
+            --app-bg: #f2f6fb;
+            --surface: #ffffff;
+            --sidebar: #eaf2fb;
+            --ink: #102a43;
+            --muted: #48647e;
+            --border: #c5d7eb;
+            --primary: #0067b1;
+            --primary-hover: #004f89;
+            --navy: #003f77;
+            --accent: #f58220;
+            --success-bg: #e2f2e8;
+            --success-ink: #185a37;
+            --warning-bg: #fff3d6;
+            --warning-ink: #73510c;
+            --error-bg: #fae5e5;
+            --error-ink: #8a2020;
+        }
+        .stApp { background: var(--app-bg); color: var(--ink); }
+        [data-testid="stHeader"] { background: rgba(244, 247, 251, .98); border-bottom: 1px solid var(--border); }
+        [data-testid="stSidebar"] { background: var(--sidebar); border-right: 1px solid var(--border); }
+        [data-testid="stSidebar"] * { color: var(--ink); }
+        .hero { padding: 1.4rem 1.5rem 1.2rem; background: var(--navy); border-radius: 4px; border-bottom: 4px solid var(--accent); }
+        .hero h1 { color: #ffffff; font-family: Georgia, serif; font-size: 2.5rem; margin: 0; }
+        .hero p { color: #d8e5f5; font-size: 1.02rem; font-weight: 500; }
+        .stage { padding: .85rem 1rem; border: 1px solid #b6d1ea; border-left: 5px solid var(--primary); border-radius: 3px; background: #e8f3fd; color: #103d68; font-weight: 600; margin: .55rem 0; }
+        [data-testid="stFileUploaderDropzone"], [data-testid="stTextArea"] textarea { background: var(--surface); border-color: #8bb7df; color: var(--ink); }
+        [data-testid="stFileUploaderDropzone"] * { color: var(--ink); }
+        [data-testid="stFileUploader"] button {
+            background: var(--primary);
+            border: 1px solid var(--primary);
+            color: #ffffff;
+            font-weight: 700;
+            min-height: 2.7rem;
+        }
+        [data-testid="stFileUploader"] button:hover,
+        [data-testid="stFileUploader"] button:focus {
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
+            color: #ffffff;
+        }
+        .stButton > button { background: var(--primary); border: 1px solid var(--primary); color: #ffffff; font-weight: 700; min-height: 2.7rem; }
+        .stButton > button:hover, .stButton > button:focus { background: var(--primary-hover); border-color: var(--primary-hover); color: #ffffff; }
+        [data-testid="stMetric"] { background: var(--surface); border: 1px solid var(--border); border-radius: 3px; padding: .7rem; }
+        [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color: var(--ink); }
+        [data-testid="stDataFrame"] { border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+        [data-testid="stAlert"] { color: var(--ink); border-radius: 3px; }
+        [data-testid="stAlert"][data-baseweb="notification"] { border: 1px solid var(--border); }
+        .stSuccess { background: var(--success-bg); color: var(--success-ink); }
+        .stWarning { background: var(--warning-bg); color: var(--warning-ink); }
+        .stError { background: var(--error-bg); color: var(--error-ink); }
+        .stCaption, [data-testid="stCaptionContainer"] { color: var(--muted); }
+        h2, h3, p, label, summary { color: var(--ink); }
     </style>
     <div class="hero">
       <h1>Bank Statement Extractor</h1>
@@ -122,6 +171,15 @@ def _show_result(merged_statement, validation_result, reflection_result) -> None
 def main() -> None:
     settings = load_settings()
     ensure_runtime_directories(settings)
+    startup_logger = get_app_logger(settings.log_directory)
+    log_event(
+        startup_logger,
+        logging.INFO,
+        "Model selected",
+        provider=settings.provider or "none",
+        model=settings.model or "none",
+        model_source=settings.model_source,
+    )
 
     with st.sidebar:
         st.header("Process a document")
@@ -134,6 +192,7 @@ def main() -> None:
         run_button = st.button("Run extraction", type="primary", use_container_width=True)
         st.caption(f"Provider: {settings.provider.title() or 'Not configured'}")
         st.caption(f"Model: {settings.model or 'Not configured'}")
+        st.caption(f"Selection: {settings.model_source}")
         st.caption("Privacy: document text is sent to the selected AI provider.")
 
     if not run_button:
@@ -148,10 +207,16 @@ def main() -> None:
 
     progress = st.progress(0)
     status = st.empty()
+    run_id = new_run_id()
+    logger = get_app_logger(settings.log_directory)
+    run_token = set_run_id(run_id)
+    st.caption(f"Run ID: {run_id}")
 
     try:
+        log_event(logger, logging.INFO, "Run started", provider=settings.provider, model=settings.model)
         with tempfile.TemporaryDirectory(dir=settings.input_directory) as upload_directory:
             pdf_path = _save_uploaded_pdf(uploaded_file, Path(upload_directory))
+            log_event(logger, logging.INFO, "PDF accepted", file_size_bytes=uploaded_file.size)
             status.markdown('<div class="stage">1. Reading the PDF...</div>', unsafe_allow_html=True)
             document_text = read_pdf_text(pdf_path, Path(upload_directory))
             if not document_text.strip():
@@ -191,11 +256,19 @@ def main() -> None:
                 status.markdown('<div class="stage">5. Validation passed. No reflection was needed.</div>', unsafe_allow_html=True)
             progress.progress(100)
             status.success("Processing complete.")
+            log_event(logger, logging.INFO, "Run completed", validation_passed=validation_result.is_valid)
             _show_result(merged_statement, validation_result, reflection_result)
+    except AgentCallError as error:
+        log_event(logger, logging.ERROR, "Run failed during provider call", error_type=type(error).__name__)
+        st.error(f"{error} (Run ID: {run_id})")
     except PdfReaderError as error:
+        log_event(logger, logging.ERROR, "Run failed while reading PDF", error_type=type(error).__name__)
         st.error(str(error))
     except Exception:
-        st.error("The application could not complete this run. Check your provider settings and try again.")
+        log_event(logger, logging.ERROR, "Run failed unexpectedly", error_type="UnexpectedError")
+        st.error(f"The application could not complete this run. Check logs/application.log using Run ID {run_id}.")
+    finally:
+        reset_run_id(run_token)
 
 
 if __name__ == "__main__":

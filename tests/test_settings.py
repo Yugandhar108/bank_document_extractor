@@ -1,6 +1,7 @@
 """Tests for provider discovery and safe configuration handling."""
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from config import settings as settings_module
 
@@ -42,6 +43,21 @@ def test_selects_first_real_key_and_ignores_placeholders(monkeypatch) -> None:
     assert loaded.model == "gemini-test-model"
     assert loaded.base_url == "https://generativelanguage.googleapis.com/v1beta/openai/"
     assert loaded.env_file == settings_module.ENV_FILE
+
+
+def test_auto_model_selection_is_resolved_and_source_is_recorded(monkeypatch) -> None:
+    _clear_provider_environment(monkeypatch)
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-test-key")
+    monkeypatch.setenv("GEMINI_MODEL", "auto")
+    monkeypatch.setattr(
+        "config.settings.select_gemini_model",
+        lambda **kwargs: SimpleNamespace(model="gemini-free", source="free Gemini model"),
+    )
+
+    loaded = settings_module.load_settings()
+
+    assert loaded.model == "gemini-free"
+    assert loaded.model_source == "free Gemini model"
 
 
 def test_requested_provider_is_preferred_when_configured(monkeypatch) -> None:

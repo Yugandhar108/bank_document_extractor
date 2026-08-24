@@ -12,6 +12,7 @@ venv/
 # Local application data
 storage/*.json
 storage/*.jsonl
+logs/*.log
 data/input/*
 data/output/*
 

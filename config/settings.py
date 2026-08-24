@@ -7,6 +7,8 @@ from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
+from config.model_discovery import select_gemini_model
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ENV_FILE = PROJECT_ROOT / ".venv" / ".env"
@@ -64,7 +66,7 @@ def _safe_base_url(value: str | None) -> str | None:
     return value.strip()
 
 
-def _select_provider() -> tuple[str, str, str, str | None]:
+def _select_provider() -> tuple[str, str, str, str | None, str]:
     """Select a configured provider without exposing its secret."""
     requested = os.getenv("LLM_PROVIDER", "").strip().lower()
     provider_names = [requested] if requested in _PROVIDER_CONFIG else []
@@ -74,14 +76,30 @@ def _select_provider() -> tuple[str, str, str, str | None]:
         key_name, model_name, base_url_name, default_model, default_base_url = _PROVIDER_CONFIG[provider]
         api_key = os.getenv(key_name, "").strip()
         if _usable(api_key):
-            model = os.getenv(model_name, "").strip() or os.getenv("LLM_MODEL", "").strip() or default_model
+            requested_model = os.getenv(model_name, "").strip() or os.getenv("LLM_MODEL", "").strip() or default_model
+            model = requested_model
+            model_source = "configured"
+            if provider == "gemini":
+                fallback_model = (
+                    os.getenv("GEMINI_FALLBACK_MODEL", "").strip()
+                    or os.getenv("LLM_FALLBACK_MODEL", "").strip()
+                    or "gemini-2.5-flash"
+                )
+                selection = select_gemini_model(
+                    api_key=api_key,
+                    requested_model=requested_model,
+                    pricing_file=PROJECT_ROOT / "config" / "pricing.json",
+                    fallback_model=fallback_model,
+                )
+                model = selection.model
+                model_source = selection.source
             configured_base_url = os.getenv(base_url_name, "").strip() or default_base_url
             base_url = _safe_base_url(configured_base_url)
             if configured_base_url and base_url is None:
                 continue
-            return provider, api_key, model, base_url
+            return provider, api_key, model, base_url, model_source
 
-    return "", "", "", None
+    return "", "", "", None, "not configured"
 
 
 def _project_path(value: str) -> Path:
@@ -102,6 +120,8 @@ class Settings:
     memory_directory: Path
     provider: str = ""
     env_file: Path = ENV_FILE
+    log_directory: Path | None = None
+    model_source: str = "configured"
 
     @property
     def pricing_file(self) -> Path:
@@ -123,7 +143,7 @@ class Settings:
 
 def load_settings() -> Settings:
     """Create settings from environment variables and project defaults."""
-    provider, api_key, model, base_url = _select_provider()
+    provider, api_key, model, base_url, model_source = _select_provider()
     return Settings(
         api_key=api_key,
         model=model,
@@ -132,6 +152,8 @@ def load_settings() -> Settings:
         output_directory=_project_path(os.getenv("OUTPUT_DIRECTORY", "data/output")),
         memory_directory=_project_path(os.getenv("MEMORY_DIRECTORY", "storage")),
         provider=provider,
+        log_directory=_project_path(os.getenv("LOG_DIRECTORY", "logs")),
+        model_source=model_source,
     )
 
 
@@ -141,5 +163,6 @@ def ensure_runtime_directories(settings: Settings) -> None:
         settings.input_directory,
         settings.output_directory,
         settings.memory_directory,
+        settings.log_directory or PROJECT_ROOT / "logs",
     ):
         directory.mkdir(parents=True, exist_ok=True)

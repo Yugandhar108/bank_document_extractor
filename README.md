@@ -32,17 +32,21 @@ The system:
 - Conditional reflection when validation fails.
 - Versioned prompt files.
 - Streamlit interface with live processing stages.
+- High-contrast SBI-inspired blue interface with matching upload and run actions.
 - Transaction table, validation errors, conflicts, timing, and reflection display.
+- Automatic Gemini model discovery with free-first, low-cost, and fallback selection.
+- Secure Run ID logging with API-key and document-content redaction.
 - Automated tests for the implemented behavior.
 
 ## Project structure
 
-- `config` - Settings and model pricing.
+- `config` - Provider settings, Gemini model discovery, and model pricing policy.
 - `data/input` - PDF files to process.
 - `data/output` - Output files created by the application.
 - `prompts` - Versioned instructions for AI workers.
 - `src/ingestion` - Safe PDF reading.
 - `src/agents` - Individual extraction and reflection agents.
+- `src/logging_utils.py` - Redacting Run ID diagnostics.
 - `src/models` - Structured data models.
 - `src/orchestration` - Parallel execution, merging, and reflection flow.
 - `src/validation` - Mechanical checks for extracted data.
@@ -50,7 +54,22 @@ The system:
 - `src/telemetry` - Usage and cost tracking components.
 - `src/hitl` - Human review components.
 - `storage` - Local persistent data.
+- `logs` - Local application diagnostics; `application.log` is excluded from Git.
 - `tests` - Automated tests.
+
+## Technology stack
+
+- **Python 3.14** - Application logic, validation, file handling, and tests.
+- **Streamlit** - SBI-inspired banking interface for upload, progress, tables, and alerts.
+- **OpenAI Python SDK** - LLM request client for the configured provider endpoint.
+- **Google Gemini model API** - Native discovery of text-generation models for `GEMINI_MODEL=auto`.
+- **pypdf** - Text extraction from every PDF page.
+- **Pydantic** - Structured extraction, merge, validation, and reflection models.
+- **asyncio + worker threads** - Parallel execution of independent extraction agents.
+- **python-dotenv** - Private provider configuration from `.venv/.env`.
+- **JSON policy files** - Versioned prompts and local model-pricing choices.
+- **Python logging** - Redacting Run ID diagnostics in `logs/application.log`.
+- **pytest** - Automated unit and regression tests with mocked provider responses.
 
 ## Setup
 
@@ -68,6 +87,21 @@ real key. Placeholder values are ignored.
 Supported keys are `OPENAI_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`,
 `OPENROUTER_API_KEY`, and `HUGGINGFACE_API_KEY`. Never put a real key in
 `.env.example` or commit `.venv/.env` to source control.
+
+For automatic economical Gemini model selection, use:
+
+```env
+LLM_PROVIDER=gemini
+GEMINI_MODEL=auto
+LLM_MODEL=
+GEMINI_FALLBACK_MODEL=gemini-2.5-flash
+```
+
+The application asks Gemini which text-generation models are available, prefers a
+model marked free in `config/pricing.json`, then chooses the lowest-cost known
+available model. If discovery fails or no priced model is available, it uses the
+fallback model. The selected model and selection reason appear in the UI and
+`logs/application.log`.
 
 ## Tests
 
@@ -97,6 +131,13 @@ The tests use mocked AI responses, so they do not require a live API request.
 - Uploaded files use a sanitized name, temporary storage, and automatic cleanup.
 - Unexpected processing errors show a general message rather than raw exception text.
 - Document text is marked as untrusted data in prompts to reduce prompt-injection risk.
+
+## Troubleshooting logs
+
+Each extraction run receives a short Run ID. If a run fails, the application shows
+that ID. Open `logs/application.log` and search for the same ID to see the provider,
+model, stage, status code, and error category. The log intentionally excludes API
+keys, document text, prompts, and raw provider responses.
 
 ## Start the application
 

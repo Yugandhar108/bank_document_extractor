@@ -6,15 +6,15 @@
   <title>Bank Statement Extractor | Project Wiki</title>
   <style>
     :root {
-      --ink: #17212b;
-      --muted: #5d6b76;
-      --paper: #f7f4ed;
-      --panel: #fffdf8;
-      --line: #d9d4c8;
-      --teal: #0b6b68;
-      --teal-light: #d8eeea;
-      --coral: #c75b42;
-      --yellow: #f3d98b;
+      --ink: #172033;
+      --muted: #475569;
+      --paper: #f8fafc;
+      --panel: #ffffff;
+      --line: #cbd5e1;
+      --teal: #0f5e68;
+      --teal-light: #e7f4f5;
+      --coral: #9f3424;
+      --yellow: #f6c344;
       --shadow: 0 12px 30px rgba(23, 33, 43, .08);
     }
 
@@ -31,8 +31,8 @@
     code, pre, .tag, nav, .eyebrow, .status { font-family: "Courier New", monospace; }
     .hero {
       padding: 72px 7vw 64px;
-      background: #153f45;
-      color: #fffdf8;
+      background: #123e48;
+      color: #ffffff;
       border-bottom: 8px solid var(--coral);
     }
     .hero-inner, main { max-width: 1120px; margin: 0 auto; }
@@ -44,7 +44,7 @@
     }
     h1, h2, h3 { line-height: 1.15; margin-top: 0; }
     h1 { max-width: 800px; margin-bottom: 20px; font-size: clamp(2.6rem, 7vw, 5.8rem); font-weight: 700; }
-    .hero p { max-width: 700px; margin: 0; font-size: 1.25rem; color: #dcebe7; }
+    .hero p { max-width: 700px; margin: 0; font-size: 1.25rem; color: #e7f4f5; }
     nav {
       position: sticky;
       top: 0;
@@ -53,7 +53,7 @@
       gap: 18px;
       overflow-x: auto;
       padding: 14px 7vw;
-      background: #fffdf8;
+      background: #ffffff;
       border-bottom: 1px solid var(--line);
       font-size: .78rem;
       white-space: nowrap;
@@ -79,7 +79,7 @@
     .status { display: inline-block; padding: 4px 9px; border-radius: 4px; font-size: .75rem; font-weight: 700; }
     .done { background: var(--teal-light); color: var(--teal); }
     .flow { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; margin: 20px 0; }
-    .flow span { padding: 10px 13px; background: var(--teal-light); border: 1px solid #a8d6d0; border-radius: 5px; font-weight: 700; }
+    .flow span { padding: 10px 13px; background: var(--teal-light); border: 1px solid #7ab7bf; border-radius: 5px; font-weight: 700; }
     .flow b { color: var(--coral); }
     ul, ol { padding-left: 24px; }
     li + li { margin-top: 7px; }
@@ -112,6 +112,7 @@
     <a href="#faq">FAQs</a>
     <a href="#troubleshooting">Troubleshooting</a>
     <a href="#security">Security</a>
+    <a href="#logs">Logs</a>
     <a href="#files">Files</a>
   </nav>
 
@@ -199,12 +200,16 @@ python -m streamlit run app.py</pre>
     <section id="stack">
       <h2>Tech Stack</h2>
       <div class="feature-grid">
-        <div class="panel"><h3>Language</h3><p><strong>Python</strong> for the application logic, validation rules, file handling, and tests.</p></div>
-        <div class="panel"><h3>AI connection</h3><p><strong>OpenAI-compatible SDK</strong> for sending prompts to a configured model. The provider can be changed through settings.</p></div>
-        <div class="panel"><h3>Document reading</h3><p><strong>pypdf</strong> for extracting text from PDF pages.</p></div>
-        <div class="panel"><h3>Data models</h3><p><strong>Pydantic</strong> for checking that agent responses have the expected structure.</p></div>
-        <div class="panel"><h3>Concurrency</h3><p><strong>asyncio</strong> and worker threads for running independent AI calls at the same time.</p></div>
-        <div class="panel"><h3>Testing</h3><p><strong>pytest</strong> with mocked AI responses, so most tests do not spend money or require a live API.</p></div>
+        <div class="panel"><h3>Application</h3><p><strong>Python 3.14</strong> runs the extraction pipeline, security controls, deterministic validation, and tests.</p></div>
+        <div class="panel"><h3>Banking UI</h3><p><strong>Streamlit</strong> provides an SBI-inspired, high-contrast interface for uploads, status updates, tables, and alerts.</p></div>
+        <div class="panel"><h3>Provider access</h3><p><strong>OpenAI Python SDK</strong> sends extraction prompts through the configured provider endpoint. Provider selection is controlled from <code>.venv/.env</code>.</p></div>
+        <div class="panel"><h3>Gemini discovery</h3><p><strong>Google Gemini model API</strong>, called with Python standard HTTP tools, lists supported text models for <code>GEMINI_MODEL=auto</code>.</p></div>
+        <div class="panel"><h3>Document reading</h3><p><strong>pypdf</strong> extracts text from every PDF page after path and file-size checks.</p></div>
+        <div class="panel"><h3>Data models</h3><p><strong>Pydantic</strong> checks the structure of extraction, merge, validation, and reflection data.</p></div>
+        <div class="panel"><h3>Parallel work</h3><p><strong>asyncio</strong> and worker threads run independent extraction agents concurrently and capture timing evidence.</p></div>
+        <div class="panel"><h3>Configuration</h3><p><strong>python-dotenv</strong> loads private provider settings from <code>.venv/.env</code>; JSON stores prompts and model-pricing policy.</p></div>
+        <div class="panel"><h3>Diagnostics</h3><p><strong>Python logging</strong> writes redacted, Run ID-based troubleshooting records to <code>logs/application.log</code>.</p></div>
+        <div class="panel"><h3>Testing</h3><p><strong>pytest</strong> uses mocked provider responses to test parsing, security, logging, model selection, and pipeline behavior.</p></div>
       </div>
     </section>
 
@@ -216,6 +221,7 @@ python -m streamlit run app.py</pre>
       <details><summary>Is the result automatically trusted?</summary><p>No. The validation stage checks objective rules and displays any warnings before the result is reviewed.</p></details>
       <details><summary>Is an API key required to run tests?</summary><p>No. The tests use fake model responses. A real key is needed only for live AI calls.</p></details>
       <details><summary>Where are prompts stored?</summary><p>Prompt files are in the <code>prompts</code> folder. Each prompt includes a version and a reason for the change.</p></details>
+      <details><summary>How is the Gemini model selected?</summary><p>Set <code>GEMINI_MODEL=auto</code>. The application checks the models available to your key, prefers a model marked free in the local pricing file, then chooses the lowest-cost known model, and finally uses <code>GEMINI_FALLBACK_MODEL</code> when needed.</p></details>
     </section>
 
     <section id="troubleshooting">
@@ -243,17 +249,29 @@ python -m streamlit run app.py</pre>
       </ul>
     </section>
 
+    <section id="logs">
+      <h2>Troubleshooting Logs</h2>
+      <p>Every extraction run receives a short Run ID. When an error appears, copy
+      that ID and search for it in <code>logs/application.log</code>.</p>
+      <p>The log records the provider, model, processing stage, status code, and
+      error category. It does not record API keys, document text, prompts, or raw
+      provider responses.</p>
+    </section>
+
     <section id="files">
       <h2>Where To Look In The Code</h2>
       <div class="two-column">
         <div><ul>
           <li><code>src/ingestion/pdf_reader.py</code> - PDF reading and path safety.</li>
           <li><code>src/agents</code> - extraction and reflection workers.</li>
+          <li><code>src/logging_utils.py</code> - redacting Run ID diagnostics.</li>
           <li><code>src/orchestration</code> - concurrency, merge, and reflection trigger.</li>
           <li><code>src/validation/validator.py</code> - deterministic checks.</li>
         </ul></div>
         <div><ul>
           <li><code>src/models/schemas.py</code> - expected data shapes.</li>
+          <li><code>config/model_discovery.py</code> - Gemini auto-model selection.</li>
+          <li><code>config/pricing.json</code> - free-first and low-cost model policy.</li>
           <li><code>prompts</code> - versioned AI instructions.</li>
           <li><code>tests</code> - examples of expected behavior.</li>
           <li><code>README.md</code> - short project guide.</li>
