@@ -33,6 +33,7 @@ The system:
 - Versioned prompt files.
 - Streamlit interface with live processing stages.
 - High-contrast SBI-inspired blue interface with matching upload and run actions.
+- Embedded Project Wiki tab for in-app setup, architecture, security, and troubleshooting guidance; wiki section links stay inside the tab.
 - Transaction table, validation errors, conflicts, timing, and reflection display.
 - Automatic Gemini model discovery with free-first, low-cost, and fallback selection.
 - Secure Run ID logging with API-key and document-content redaction.
@@ -94,13 +95,14 @@ For automatic economical Gemini model selection, use:
 LLM_PROVIDER=gemini
 GEMINI_MODEL=auto
 LLM_MODEL=
-GEMINI_FALLBACK_MODEL=gemini-2.5-flash
+GEMINI_FALLBACK_MODEL=gemini-3.5-flash-lite
 ```
 
 The application asks Gemini which text-generation models are available, prefers a
 model marked free in `config/pricing.json`, then chooses the lowest-cost known
 available model. If discovery fails or no priced model is available, it uses the
-fallback model. The selected model and selection reason appear in the UI and
+fallback model. The current pricing policy recognizes `gemini-3.5-flash-lite` and
+`gemini-3.6-flash`. The selected model and selection reason appear in the UI and
 `logs/application.log`.
 
 ## Tests
@@ -163,6 +165,7 @@ To use the application:
 2. Select **Run extraction**.
 3. Review the extracted account details and transaction table.
 4. Review validation warnings, merge conflicts, and reflection output if shown.
+5. Open the **Project Wiki** tab for help without leaving the application.
 
 The browser page lets you upload a PDF, start extraction, see each processing
 stage, review the transaction table, and inspect validation or reflection output.

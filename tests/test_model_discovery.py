@@ -22,11 +22,11 @@ class FakeResponse:
             {
                 "models": [
                     {
-                        "name": "models/gemini-2.5-pro",
+                        "name": "models/gemini-3.6-flash",
                         "supportedGenerationMethods": ["generateContent"],
                     },
                     {
-                        "name": "models/gemini-2.5-flash-lite",
+                        "name": "models/gemini-3.5-flash-lite",
                         "supportedGenerationMethods": ["generateContent"],
                     },
                     {
@@ -43,7 +43,7 @@ def test_lists_only_text_generation_models(monkeypatch) -> None:
 
     models = list_gemini_text_models("test-key")
 
-    assert models == ["gemini-2.5-pro", "gemini-2.5-flash-lite"]
+    assert models == ["gemini-3.6-flash", "gemini-3.5-flash-lite"]
 
 
 def test_prefers_free_available_model(tmp_path: Path, monkeypatch) -> None:
@@ -52,12 +52,12 @@ def test_prefers_free_available_model(tmp_path: Path, monkeypatch) -> None:
         json.dumps(
             {
                 "gemini": {
-                    "gemini-2.5-pro": {
+                    "gemini-3.6-flash": {
                         "is_free": False,
                         "input_usd_per_1m_tokens": 1.0,
                         "output_usd_per_1m_tokens": 5.0,
                     },
-                    "gemini-2.5-flash-lite": {
+                    "gemini-3.5-flash-lite": {
                         "is_free": True,
                         "input_usd_per_1m_tokens": 0.0,
                         "output_usd_per_1m_tokens": 0.0,
@@ -69,12 +69,12 @@ def test_prefers_free_available_model(tmp_path: Path, monkeypatch) -> None:
     )
     monkeypatch.setattr(
         "config.model_discovery.list_gemini_text_models",
-        lambda api_key: ["gemini-2.5-pro", "gemini-2.5-flash-lite"],
+        lambda api_key: ["gemini-3.6-flash", "gemini-3.5-flash-lite"],
     )
 
     selection = select_gemini_model("test-key", "auto", pricing_file, "gemini-fallback")
 
-    assert selection == ModelSelection("gemini-2.5-flash-lite", "free Gemini model")
+    assert selection == ModelSelection("gemini-3.5-flash-lite", "free Gemini model")
 
 
 def test_uses_lowest_cost_when_no_free_model_is_available(tmp_path: Path, monkeypatch) -> None:

@@ -8,6 +8,7 @@ from pathlib import Path
 import tempfile
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from config.settings import ensure_runtime_directories, load_settings
 from src.agents.base_agent import AgentCallError
@@ -19,6 +20,7 @@ from src.orchestration.reflection import run_reflection_if_needed
 from src.validation.validator import validate_merged_statement
 
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+WIKI_FILE = Path(__file__).with_name("WIKI.html")
 
 
 st.set_page_config(
@@ -168,6 +170,33 @@ def _show_result(merged_statement, validation_result, reflection_result) -> None
         st.json(merged_statement.prompt_versions)
 
 
+def _show_project_wiki() -> None:
+    """Render the project guide inside a dedicated application tab."""
+    st.subheader("Project Wiki")
+    st.caption("Project guide, setup steps, architecture, security, and troubleshooting.")
+    if not WIKI_FILE.is_file():
+        st.error("The project wiki file could not be found.")
+        return
+    wiki_html = WIKI_FILE.read_text(encoding="utf-8")
+    navigation_script = """
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll('a[href^="#"]').forEach((link) => {
+                link.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    const section = document.getElementById(link.getAttribute("href").slice(1));
+                    if (section) {
+                        section.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                });
+            });
+        });
+    </script>
+    """
+    embedded_wiki = wiki_html.replace("</body>", f"{navigation_script}</body>")
+    components.html(embedded_wiki, height=900, scrolling=True)
+
+
 def main() -> None:
     settings = load_settings()
     ensure_runtime_directories(settings)
@@ -181,94 +210,100 @@ def main() -> None:
         model_source=settings.model_source,
     )
 
-    with st.sidebar:
-        st.header("Process a document")
-        uploaded_file = st.file_uploader("Choose a bank statement PDF", type=["pdf"])
-        memory_context = st.text_area(
-            "Memory context",
-            value="",
-            help="Optional source-specific guidance to include in the extraction prompts.",
-        )
-        run_button = st.button("Run extraction", type="primary", use_container_width=True)
-        st.caption(f"Provider: {settings.provider.title() or 'Not configured'}")
-        st.caption(f"Model: {settings.model or 'Not configured'}")
-        st.caption(f"Selection: {settings.model_source}")
-        st.caption("Privacy: document text is sent to the selected AI provider.")
+    extractor_tab, wiki_tab = st.tabs(["Extractor", "Project Wiki"])
 
-    if not run_button:
-        st.info("Upload a PDF in the sidebar, then select Run extraction.")
-        return
-    if not uploaded_file:
-        st.warning("Please upload a PDF before starting.")
-        return
-    if not settings.is_configured:
-        st.error(settings.configuration_message)
-        return
+    with wiki_tab:
+        _show_project_wiki()
 
-    progress = st.progress(0)
-    status = st.empty()
-    run_id = new_run_id()
-    logger = get_app_logger(settings.log_directory)
-    run_token = set_run_id(run_id)
-    st.caption(f"Run ID: {run_id}")
-
-    try:
-        log_event(logger, logging.INFO, "Run started", provider=settings.provider, model=settings.model)
-        with tempfile.TemporaryDirectory(dir=settings.input_directory) as upload_directory:
-            pdf_path = _save_uploaded_pdf(uploaded_file, Path(upload_directory))
-            log_event(logger, logging.INFO, "PDF accepted", file_size_bytes=uploaded_file.size)
-            status.markdown('<div class="stage">1. Reading the PDF...</div>', unsafe_allow_html=True)
-            document_text = read_pdf_text(pdf_path, Path(upload_directory))
-            if not document_text.strip():
-                st.error("This PDF has no embedded text. It may be a scanned document.")
-                return
-            progress.progress(20)
-
-            status.markdown('<div class="stage">2. Running three extraction workers in parallel...</div>', unsafe_allow_html=True)
-            parallel_result = asyncio.run(
-                run_parallel_extraction(
-                    document_text=document_text,
-                    memory_context=memory_context,
-                    settings=settings,
-                )
+    with extractor_tab:
+        with st.sidebar:
+            st.header("Process a document")
+            uploaded_file = st.file_uploader("Choose a bank statement PDF", type=["pdf"])
+            memory_context = st.text_area(
+                "Memory context",
+                value="",
+                help="Optional source-specific guidance to include in the extraction prompts.",
             )
-            progress.progress(60)
-            with st.expander("Parallel worker timing evidence", expanded=True):
-                _show_agent_timings(parallel_result)
+            run_button = st.button("Run extraction", type="primary", use_container_width=True)
+            st.caption(f"Provider: {settings.provider.title() or 'Not configured'}")
+            st.caption(f"Model: {settings.model or 'Not configured'}")
+            st.caption(f"Selection: {settings.model_source}")
+            st.caption("Privacy: document text is sent to the selected AI provider.")
 
-            status.markdown('<div class="stage">3. Combining worker results...</div>', unsafe_allow_html=True)
-            merged_statement = merge_parallel_results(parallel_result)
-            progress.progress(75)
+        if not run_button:
+            st.info("Upload a PDF in the sidebar, then select Run extraction.")
+            return
+        if not uploaded_file:
+            st.warning("Please upload a PDF before starting.")
+            return
+        if not settings.is_configured:
+            st.error(settings.configuration_message)
+            return
 
-            status.markdown('<div class="stage">4. Checking the extracted information...</div>', unsafe_allow_html=True)
-            validation_result = validate_merged_statement(merged_statement)
-            progress.progress(85)
+        progress = st.progress(0)
+        status = st.empty()
+        run_id = new_run_id()
+        logger = get_app_logger(settings.log_directory)
+        run_token = set_run_id(run_id)
+        st.caption(f"Run ID: {run_id}")
 
-            reflection_result = None
-            if not validation_result.is_valid:
-                status.markdown('<div class="stage">5. Explaining the validation problem...</div>', unsafe_allow_html=True)
-                reflection_result, _ = run_reflection_if_needed(
-                    validation_result=validation_result,
-                    merged_statement=merged_statement,
-                    document_text=document_text,
+        try:
+            log_event(logger, logging.INFO, "Run started", provider=settings.provider, model=settings.model)
+            with tempfile.TemporaryDirectory(dir=settings.input_directory) as upload_directory:
+                pdf_path = _save_uploaded_pdf(uploaded_file, Path(upload_directory))
+                log_event(logger, logging.INFO, "PDF accepted", file_size_bytes=uploaded_file.size)
+                status.markdown('<div class="stage">1. Reading the PDF...</div>', unsafe_allow_html=True)
+                document_text = read_pdf_text(pdf_path, Path(upload_directory))
+                if not document_text.strip():
+                    st.error("This PDF has no embedded text. It may be a scanned document.")
+                    return
+                progress.progress(20)
+
+                status.markdown('<div class="stage">2. Running three extraction workers in parallel...</div>', unsafe_allow_html=True)
+                parallel_result = asyncio.run(
+                    run_parallel_extraction(
+                        document_text=document_text,
+                        memory_context=memory_context,
+                        settings=settings,
+                    )
                 )
-            else:
-                status.markdown('<div class="stage">5. Validation passed. No reflection was needed.</div>', unsafe_allow_html=True)
-            progress.progress(100)
-            status.success("Processing complete.")
-            log_event(logger, logging.INFO, "Run completed", validation_passed=validation_result.is_valid)
-            _show_result(merged_statement, validation_result, reflection_result)
-    except AgentCallError as error:
-        log_event(logger, logging.ERROR, "Run failed during provider call", error_type=type(error).__name__)
-        st.error(f"{error} (Run ID: {run_id})")
-    except PdfReaderError as error:
-        log_event(logger, logging.ERROR, "Run failed while reading PDF", error_type=type(error).__name__)
-        st.error(str(error))
-    except Exception:
-        log_event(logger, logging.ERROR, "Run failed unexpectedly", error_type="UnexpectedError")
-        st.error(f"The application could not complete this run. Check logs/application.log using Run ID {run_id}.")
-    finally:
-        reset_run_id(run_token)
+                progress.progress(60)
+                with st.expander("Parallel worker timing evidence", expanded=True):
+                    _show_agent_timings(parallel_result)
+
+                status.markdown('<div class="stage">3. Combining worker results...</div>', unsafe_allow_html=True)
+                merged_statement = merge_parallel_results(parallel_result)
+                progress.progress(75)
+
+                status.markdown('<div class="stage">4. Checking the extracted information...</div>', unsafe_allow_html=True)
+                validation_result = validate_merged_statement(merged_statement)
+                progress.progress(85)
+
+                reflection_result = None
+                if not validation_result.is_valid:
+                    status.markdown('<div class="stage">5. Explaining the validation problem...</div>', unsafe_allow_html=True)
+                    reflection_result, _ = run_reflection_if_needed(
+                        validation_result=validation_result,
+                        merged_statement=merged_statement,
+                        document_text=document_text,
+                    )
+                else:
+                    status.markdown('<div class="stage">5. Validation passed. No reflection was needed.</div>', unsafe_allow_html=True)
+                progress.progress(100)
+                status.success("Processing complete.")
+                log_event(logger, logging.INFO, "Run completed", validation_passed=validation_result.is_valid)
+                _show_result(merged_statement, validation_result, reflection_result)
+        except AgentCallError as error:
+            log_event(logger, logging.ERROR, "Run failed during provider call", error_type=type(error).__name__)
+            st.error(f"{error} (Run ID: {run_id})")
+        except PdfReaderError as error:
+            log_event(logger, logging.ERROR, "Run failed while reading PDF", error_type=type(error).__name__)
+            st.error(str(error))
+        except Exception:
+            log_event(logger, logging.ERROR, "Run failed unexpectedly", error_type="UnexpectedError")
+            st.error(f"The application could not complete this run. Check logs/application.log using Run ID {run_id}.")
+        finally:
+            reset_run_id(run_token)
 
 
 if __name__ == "__main__":

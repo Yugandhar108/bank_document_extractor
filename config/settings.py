@@ -29,7 +29,7 @@ _PROVIDER_CONFIG = {
         "GEMINI_API_KEY",
         "GEMINI_MODEL",
         "GEMINI_BASE_URL",
-        "gemini-2.0-flash",
+        "gemini-3.5-flash-lite",
         "https://generativelanguage.googleapis.com/v1beta/openai/",
     ),
     "groq": ("GROQ_API_KEY", "GROQ_MODEL", "GROQ_BASE_URL", "llama-3.3-70b-versatile", "https://api.groq.com/openai/v1"),
@@ -83,7 +83,7 @@ def _select_provider() -> tuple[str, str, str, str | None, str]:
                 fallback_model = (
                     os.getenv("GEMINI_FALLBACK_MODEL", "").strip()
                     or os.getenv("LLM_FALLBACK_MODEL", "").strip()
-                    or "gemini-2.5-flash"
+                    or "gemini-3.5-flash-lite"
                 )
                 selection = select_gemini_model(
                     api_key=api_key,
