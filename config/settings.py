@@ -108,6 +108,13 @@ def _project_path(value: str) -> Path:
     return path if path.is_absolute() else PROJECT_ROOT / path
 
 
+def _bool_env(name: str, default: bool) -> bool:
+    value = os.getenv(name, "").strip().lower()
+    if not value:
+        return default
+    return value in {"1", "true", "yes", "on"}
+
+
 @dataclass(frozen=True)
 class Settings:
     """Runtime settings used by the document extractor."""
@@ -122,6 +129,9 @@ class Settings:
     env_file: Path = ENV_FILE
     log_directory: Path | None = None
     model_source: str = "configured"
+    ocr_enabled: bool = True
+    ocr_dpi: int = 300
+    tesseract_cmd: str | None = None
 
     @property
     def pricing_file(self) -> Path:
@@ -154,6 +164,9 @@ def load_settings() -> Settings:
         provider=provider,
         log_directory=_project_path(os.getenv("LOG_DIRECTORY", "logs")),
         model_source=model_source,
+        ocr_enabled=_bool_env("ENABLE_OCR", True),
+        ocr_dpi=int(os.getenv("OCR_DPI", "300").strip() or "300"),
+        tesseract_cmd=os.getenv("TESSERACT_CMD", "").strip() or None,
     )
 
 

@@ -12,7 +12,7 @@ import streamlit.components.v1 as components
 
 from config.settings import ensure_runtime_directories, load_settings
 from src.agents.base_agent import AgentCallError
-from src.ingestion.pdf_reader import PdfReaderError, read_pdf_text
+from src.ingestion.pdf_reader import PdfOcrError, PdfReaderError, read_pdf_text
 from src.logging_utils import get_app_logger, log_event, new_run_id, reset_run_id, set_run_id
 from src.orchestration.merge import merge_parallel_results
 from src.orchestration.parallel_runner import run_parallel_extraction
@@ -253,9 +253,15 @@ def main() -> None:
                 pdf_path = _save_uploaded_pdf(uploaded_file, Path(upload_directory))
                 log_event(logger, logging.INFO, "PDF accepted", file_size_bytes=uploaded_file.size)
                 status.markdown('<div class="stage">1. Reading the PDF...</div>', unsafe_allow_html=True)
-                document_text = read_pdf_text(pdf_path, Path(upload_directory))
+                document_text = read_pdf_text(
+                    pdf_path,
+                    Path(upload_directory),
+                    enable_ocr=settings.ocr_enabled,
+                    ocr_dpi=settings.ocr_dpi,
+                    tesseract_cmd=settings.tesseract_cmd,
+                )
                 if not document_text.strip():
-                    st.error("This PDF has no embedded text. It may be a scanned document.")
+                    st.error("No text could be found or recovered from this PDF.")
                     return
                 progress.progress(20)
 
@@ -296,6 +302,9 @@ def main() -> None:
         except AgentCallError as error:
             log_event(logger, logging.ERROR, "Run failed during provider call", error_type=type(error).__name__)
             st.error(f"{error} (Run ID: {run_id})")
+        except PdfOcrError as error:
+            log_event(logger, logging.ERROR, "Run failed during OCR fallback", error_type=type(error).__name__)
+            st.error(str(error))
         except PdfReaderError as error:
             log_event(logger, logging.ERROR, "Run failed while reading PDF", error_type=type(error).__name__)
             st.error(str(error))

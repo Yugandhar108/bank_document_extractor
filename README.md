@@ -20,6 +20,7 @@ The system:
 ## Application features
 
 - Safe PDF text extraction from every page.
+- Automatic OCR fallback for scanned PDFs without an embedded text layer.
 - Protection against reading files outside `data/input`.
 - Three extraction agents:
   - account metadata
@@ -45,15 +46,13 @@ The system:
 - `data/input` - PDF files to process.
 - `data/output` - Output files created by the application.
 - `prompts` - Versioned instructions for AI workers.
-- `src/ingestion` - Safe PDF reading.
+- `src/ingestion` - Safe PDF reading and OCR fallback for scanned PDFs.
 - `src/agents` - Individual extraction and reflection agents.
 - `src/logging_utils.py` - Redacting Run ID diagnostics.
 - `src/models` - Structured data models.
 - `src/orchestration` - Parallel execution, merging, and reflection flow.
 - `src/validation` - Mechanical checks for extracted data.
-- `src/memory` - Memory-related application components.
-- `src/telemetry` - Usage and cost tracking components.
-- `src/hitl` - Human review components.
+- `scripts` - Optional document inspection and export utilities.
 - `storage` - Local persistent data.
 - `logs` - Local application diagnostics; `application.log` is excluded from Git.
 - `tests` - Automated tests.
@@ -65,6 +64,7 @@ The system:
 - **OpenAI Python SDK** - LLM request client for the configured provider endpoint.
 - **Google Gemini model API** - Native discovery of text-generation models for `GEMINI_MODEL=auto`.
 - **pypdf** - Text extraction from every PDF page.
+- **PyMuPDF + pytesseract + Pillow** - Page rendering and OCR fallback for scanned PDFs.
 - **Pydantic** - Structured extraction, merge, validation, and reflection models.
 - **asyncio + worker threads** - Parallel execution of independent extraction agents.
 - **python-dotenv** - Private provider configuration from `.venv/.env`.
@@ -115,9 +115,27 @@ python -m pytest -q
 
 The tests use mocked AI responses, so they do not require a live API request.
 
+## Scanned PDF support (OCR)
+
+When a PDF has no embedded text layer, the application renders each page to an
+image and runs OCR to recover the text.
+
+- OCR requires the [Tesseract engine](https://github.com/tesseract-ocr/tesseract)
+  to be installed on the machine running the app. It is a separate program, not
+  a Python package.
+  - Windows: install from the Tesseract installer and, if it is not on `PATH`,
+    set `TESSERACT_CMD` in `.venv\.env` to the full path of `tesseract.exe`.
+  - macOS: `brew install tesseract`.
+  - Linux: `sudo apt-get install tesseract-ocr` (or your distribution's package).
+- Control OCR behavior with `.venv\.env` settings:
+  - `ENABLE_OCR` (default `true`) turns the fallback on or off.
+  - `OCR_DPI` (default `300`) controls the rendering resolution used for OCR.
+  - `TESSERACT_CMD` sets an explicit path to the Tesseract executable.
+- If OCR packages or the Tesseract engine are missing, the run fails with a
+  clear error instead of a generic failure.
+
 ## Notes
 
-- A scanned PDF without an embedded text layer returns no text. OCR is not added yet.
 - Provider free-tier limits and model prices can change.
 - If an API key has been shared publicly, revoke it and create a replacement.
 - Upload only documents that your organization permits sending to an AI provider.

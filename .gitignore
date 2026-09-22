@@ -15,6 +15,7 @@ storage/*.jsonl
 logs/*.log
 data/input/*
 data/output/*
+*.pdf
 
 # Keep folder placeholders in version control
 !.gitkeep
